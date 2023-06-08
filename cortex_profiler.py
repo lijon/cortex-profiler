@@ -168,7 +168,7 @@ which generates a FUNC symbol of size 0:
                     total = 0
                     countmap = { }
                     childmap = { }
-                    sampler.initSymbols(elf)
+                    sampler.initSymbols(elf, args.readelf)
                     continue
 
                 print ('\x1b[2J\x1b[H')
