@@ -7,7 +7,6 @@
 # TODO:
 # - keyboard input to reset? maybe: press ctrl-C again to quit, any other key to reset?
 # - instead of detecting ELF mtime change, it would be better to detect device reset via openocd if possible. maybe an option would be to have a separate "trigger file" that our vscode launch action can touch?
-# - gracefully handle openocd server disconnect
 
 import sys
 import time
@@ -140,7 +139,12 @@ which generates a FUNC symbol of size 0:
 
     try:
         while True:
-            func, addr, parent = sampler.func((sampler.getpc()))
+            try:
+                func, addr, parent = sampler.func((sampler.getpc()))
+            except ConnectionResetError:
+                sampler.net = None
+                print("Connection lost")
+                exit(-1)
 
             if not addr:
                 continue
