@@ -5,7 +5,7 @@ setup(
     version='1.0.0',
     description='PC sampling profiler for ARM Cortex-M',
     py_modules=['cortex_profiler'],
-    url='https://github.com/...',
+    url='https://github.com/lijon/cortex-profiler',
     author='Jonatan Liljedahl',
     author_email='lijon@kymatica.com',
     entry_points={
