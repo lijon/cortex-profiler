@@ -166,6 +166,7 @@ which generates a FUNC symbol of size 0:
             if cur - start > interval:
                 if os.path.getmtime(elf) > sampler.elfmtime:
                     total = 0
+                    start0 = cur;
                     countmap = { }
                     childmap = { }
                     sampler.initSymbols(elf, args.readelf)
