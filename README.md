@@ -6,6 +6,12 @@ It works also for the simpler Cortex-M models without SWO.
 
 A table of statistics is displayed that shows how often the CPU is executing inside each function.
 
+![screenshot](screenshot.png)
+
+The script detects if the ELF symbol file is modified and resets itself, which is useful if you leave the profiler running while developing.
+
+## More detail
+
 Functions can be split up in sections for further detail by the use of this GCC macro, which generates a FUNC symbol of size 0:
 
 ```c
