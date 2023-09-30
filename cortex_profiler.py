@@ -50,7 +50,7 @@ class OpenOCDCMSampler(object):
         return 0
 
 
-    def initSymbols(self, elf, readelf):
+    def initSymbols(self, elf, readelf, demangle):
         proc = subprocess.Popen([readelf, '-sW', elf], stdout=subprocess.PIPE)
         self.elfmtime = os.path.getmtime(elf)
         self.table = []
@@ -68,6 +68,25 @@ class OpenOCDCMSampler(object):
             except IndexError:
                 pass
 
+        # demangle c++ function names
+        if not demangle is None and demangle != "":
+            # NOTE: arm-none-eabi-c++filt expects prefix "_Z", while c++filt expects "__Z".
+            # that's the only difference - prepending function name with extra underscore makes it work with x86 c++filt.
+            names = [item[1] for item in self.table if item[1].startswith("_Z")]
+            names_str = '\r\n'.join(names)
+            proc = subprocess.Popen([demangle, '--no-params'], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+            proc_stdout = proc.communicate(input=bytes(names_str, encoding='ascii'))[0]
+            names_demangled = proc_stdout.decode('ascii').split("\r\n")
+            if len(names_demangled) == len(names):
+                idx_in = 0
+                for idx_out in range(len(self.table)):
+                    if self.table[idx_out][1] == names[idx_in]:
+                        item = self.table[idx_out]
+                        self.table[idx_out] = (item[0], names_demangled[idx_in], item[2])
+                        idx_in += 1
+            else:
+                print("Warning: got {len(names_demangled)} demangled function names, expected {len(names)}")
+
         # find marked subsections of functions
         self.table.sort()
         parent = ''
@@ -80,7 +99,7 @@ class OpenOCDCMSampler(object):
                 self.table[i] = (addr, symb, None)
                 parent = symb
                 parentend = addr+size
-        
+
         self.addrs = [ x for (x, y, z) in self.table ]
 
     def func(self, pc):
@@ -100,13 +119,13 @@ def cli():
 
     help = '''A telnet connection to a running openocd server is used to sample the program counter.
 A table of statistics is displayed that shows how often the CPU is executing inside each function.
-    
+
 Functions can be split up in sections for further detail by the use of this GCC macro,
 which generates a FUNC symbol of size 0:
 
     #define FUNC_SYMB(l) asm(".thumb_func\\n" l "$uid%=:" :::)
     '''
-    
+
     ap = argparse.ArgumentParser(description = "PC sampling profiler for ARM Cortex-M.", epilog=help, formatter_class=UltimateHelpFormatter)
     ap.add_argument("filename", help = "ELF file with symbols")
     ap.add_argument("-r","--rate", default=0.005, type=float, help = "sampling rate limit (seconds)")
@@ -115,12 +134,13 @@ which generates a FUNC symbol of size 0:
     ap.add_argument("-H","--host", default='localhost', help = "openocd telnet host")
     ap.add_argument("-p","--port", default=4444, type=int, help = "openocd telnet port")
     ap.add_argument("-e","--readelf", default="arm-none-eabi-readelf", help = "readelf command")
+    ap.add_argument("-d","--demangle", default="arm-none-eabi-c++filt", help = "C++ demangle command")
     args = ap.parse_args()
 
     sampler = OpenOCDCMSampler()
     elf = args.filename;
-    sampler.initSymbols(elf, args.readelf)
-    
+    sampler.initSymbols(elf, args.readelf, args.demangle)
+
     try:
         sampler.connect(args.host, args.port)
     except:
@@ -155,7 +175,7 @@ which generates a FUNC symbol of size 0:
                 if parent not in childmap:
                     childmap[parent] = { }
                 p = childmap[parent]
-                
+
                 if func not in p:
                     p[func] = 0
                 p[func] += 1
@@ -163,14 +183,14 @@ which generates a FUNC symbol of size 0:
                 func = parent
 
             if func not in countmap:
-                countmap[func] = 0                
-            countmap[func] += 1                
+                countmap[func] = 0
+            countmap[func] += 1
 
             cur = time.time()
             if cur - start > interval:
                 if os.path.getmtime(elf) > sampler.elfmtime:
                     total = 0
-                    start0 = cur;
+                    start0 = cur
                     countmap = { }
                     childmap = { }
                     sampler.initSymbols(elf, args.readelf)
@@ -193,3 +213,9 @@ which generates a FUNC symbol of size 0:
 
     except KeyboardInterrupt:
         pass
+
+###
+
+if __name__ == "__main__":
+    cli()
+
