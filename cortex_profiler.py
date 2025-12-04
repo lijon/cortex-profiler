@@ -42,7 +42,6 @@ class OpenOCDCMSampler(object):
         if res:
             prefix = res[0:16]
             num    = res[16:-5]
-            res    = res[-15:0]
 
             if prefix == cmd:
                 return int(num,16)
@@ -60,6 +59,7 @@ class OpenOCDCMSampler(object):
             try:
                 if field[3] == 'FUNC':
                     addr = int(field[1], 16)
+                    addr &= ~1 # mask thumb bit
                     func = field[7]
                     size = int(field[2])
                     if addr not in self.indexes:
@@ -193,7 +193,7 @@ which generates a FUNC symbol of size 0:
                     start0 = cur
                     countmap = { }
                     childmap = { }
-                    sampler.initSymbols(elf, args.readelf)
+                    sampler.initSymbols(elf, args.readelf, args.demangle)
                     continue
 
                 print ('\x1b[2J\x1b[H')
