@@ -85,7 +85,7 @@ class OpenOCDCMSampler(object):
                         self.table[idx_out] = (item[0], names_demangled[idx_in], item[2])
                         idx_in += 1
             else:
-                print("Warning: got {len(names_demangled)} demangled function names, expected {len(names)}")
+                print("Warning: got {} demangled function names, expected {}: {}".format(len(names_demangled), len(names), names_demangled))
 
         # find marked subsections of functions
         self.table.sort()
@@ -94,13 +94,17 @@ class OpenOCDCMSampler(object):
         for i, (addr, symb, size) in enumerate(self.table):
             if size == 0 and addr < parentend:
                 symb = symb[:symb.find("$uid")]
-                self.table[i] = (addr, symb, parent)
+                self.table[i] = (addr, symb, parent, 0)
             else:
-                self.table[i] = (addr, symb, None)
+                if size == 0:
+                    symb = "("+symb+")"
+                elif size == 2:
+                    symb = "["+symb+"]"
+                self.table[i] = (addr, symb, None, size)
                 parent = symb
                 parentend = addr+size
 
-        self.addrs = [ x for (x, y, z) in self.table ]
+        self.addrs = [ x for (x, y, z, w) in self.table ]
 
     def func(self, pc):
 
@@ -110,7 +114,7 @@ class OpenOCDCMSampler(object):
         # find where pc lands between addresses, ignoring size
         i = bisect_right(self.addrs, pc)
         if i:
-            addr, symb, parent = self.table[i-1]
+            addr, symb, parent, size = self.table[i-1]
             return (symb, addr, parent)
 
         return ('', 0, None)
@@ -141,6 +145,9 @@ which generates a FUNC symbol of size 0:
     elf = args.filename;
     sampler.initSymbols(elf, args.readelf, args.demangle)
 
+    for row in sampler.table:
+        print("{:08x}: {:4d} {} ({})".format(row[0],row[3],row[1],row[2]))
+
     try:
         sampler.connect(args.host, args.port)
     except:
@@ -159,12 +166,15 @@ which generates a FUNC symbol of size 0:
 
     try:
         while True:
+            pc = sampler.getpc()
             try:
-                func, addr, parent = sampler.func((sampler.getpc()))
+                func, addr, parent = sampler.func((pc))
             except ConnectionResetError:
                 sampler.net = None
                 print("Connection lost")
                 exit(-1)
+
+            #print("PC {:08x} ADR {:08x} SYM {}".format(pc, addr, func))
 
             if not addr:
                 continue
