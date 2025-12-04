@@ -6,7 +6,7 @@
 
 # TODO:
 # - keyboard input to reset? maybe: press ctrl-C again to quit, any other key to reset?
-# - instead of detecting ELF mtime change, it would be better to detect device reset via openocd if possible. maybe an option would be to have a separate "trigger file" that our vscode launch action can touch?
+# - instead of detecting ELF mtime change, it would be better to detect device reset via openocd if possible. an option would to let the build system touch the ELF file when reflashing/restarting device even if we didn't recompile it.
 
 import sys
 import time
