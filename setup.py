@@ -8,6 +8,9 @@ setup(
     url='https://github.com/lijon/cortex-profiler',
     author='Jonatan Liljedahl',
     author_email='lijon@kymatica.com',
+    install_requires=[
+        'telnetlib-313-and-up; python_version >= "3.13"',
+    ],
     entry_points={
         'console_scripts': [
             'cortex_profiler = cortex_profiler:cli',
